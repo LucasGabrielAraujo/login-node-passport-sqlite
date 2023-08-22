@@ -1,37 +1,75 @@
+// app.js
 const express = require('express');
+const passport = require('passport');
+const session = require('express-session');
 const bodyParser = require('body-parser');
-const {db} = require('./db/db'); // Asegúrate de tener la ruta correcta
+const path = require('path')
+const logger = require('morgan')
+const {db,createUser} = require('./db');
+require('./routes/auth');
 
 const app = express();
-const port = 3000;
 
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(logger('dev'))
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(session({ secret: 'your-secret-key', resave: true, saveUninitialized: true }));
+app.use(passport.initialize());
+app.use(passport.session());
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
 
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');
+app.get('/', (req, res)=>{
+  res.sendFile(__dirname + '/public/index.html')
+})
+
+app.get('/login', (req, res)=>{
+  res.render('login');
+});
+app.post('/login', passport.authenticate('local', {
+  successRedirect: '/success',
+  failureRedirect: '/failure'
+}));
+
+// ... (otras configuraciones y middlewares)
+
+app.get('/success', (req, res) => {
+  res.render('success');
 });
 
-app.get('/login', (req, res) => {
-  res.sendFile(__dirname + '/public/login.html'); // Archivo HTML para el formulario de inicio de sesión
+app.get('/failure', (req, res) => {
+  res.render('failure');
 });
 
-app.post('/login', (req, res) => {
+app.get('/signup', (req, res)=>{
+  res.render('signup');
+})
+app.post('/signup', (req, res) => {
   const { username, password } = req.body;
+  
+  if (!username || !password) {
+    return res.render('signup', { error: 'Both username and password are required.' });
+  }
 
-  db.get('SELECT * FROM users WHERE username = ? AND password = ?', [username, password], (err, row) => {
+  db.get("SELECT * FROM users WHERE username = ?", [username], (err, user) => {
     if (err) {
-      console.log(err)
-      return res.status(500).json({ error: 'Error en la base de datos' });
+      return res.render('signup', { error: 'An error occurred. Please try again later.' });
     }
     
-    if (!row) {
-      return res.status(401).json({ error: 'Credenciales inválidas' });
+    if (user) {
+      return res.render('signup', { error: 'Username is already taken.' });
     }
-
-    res.json({ message: 'Inicio de sesión exitoso' });
+    
+    createUser(username, password, (err) => {
+      if (err) {
+        return res.render('signup', { error: 'An error occurred. Please try again later.' });
+      }
+      
+      return res.redirect('/success');
+    });
   });
 });
 
-app.listen(port, () => {
-  console.log(`Servidor corriendo en http://localhost:${port}`);
+
+app.listen(3000, () => {
+  console.log('Server is running on port 3000');
 });
