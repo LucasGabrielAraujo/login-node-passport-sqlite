@@ -1,10 +1,37 @@
-const express = require("express");
+const express = require('express');
+const bodyParser = require('body-parser');
+const {db} = require('./db/db'); // Asegúrate de tener la ruta correcta
+
 const app = express();
-const PORT = 3000;
+const port = 3000;
 
-const indexRouter = require("./routes/index.routes");
+app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use(express.json());
-app.use("/", indexRouter.router);
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/public/index.html');
+});
 
-app.listen(PORT, () => { console.log(`App listen in port ${PORT}`) })
+app.get('/login', (req, res) => {
+  res.sendFile(__dirname + '/public/login.html'); // Archivo HTML para el formulario de inicio de sesión
+});
+
+app.post('/login', (req, res) => {
+  const { username, password } = req.body;
+
+  db.get('SELECT * FROM users WHERE username = ? AND password = ?', [username, password], (err, row) => {
+    if (err) {
+      console.log(err)
+      return res.status(500).json({ error: 'Error en la base de datos' });
+    }
+    
+    if (!row) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+
+    res.json({ message: 'Inicio de sesión exitoso' });
+  });
+});
+
+app.listen(port, () => {
+  console.log(`Servidor corriendo en http://localhost:${port}`);
+});
