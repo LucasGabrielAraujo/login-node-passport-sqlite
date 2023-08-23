@@ -30,7 +30,6 @@ app.post('/login', passport.authenticate('local', {
   failureRedirect: '/failure'
 }));
 
-// ... (otras configuraciones y middlewares)
 
 app.get('/success', (req, res) => {
   res.render('success');
@@ -45,11 +44,10 @@ app.get('/signup', (req, res)=>{
 })
 app.post('/signup', (req, res) => {
   const { username, password } = req.body;
-  
   if (!username || !password) {
     return res.render('signup', { error: 'Both username and password are required.' });
   }
-
+  
   db.get("SELECT * FROM users WHERE username = ?", [username], (err, user) => {
     if (err) {
       return res.render('signup', { error: 'An error occurred. Please try again later.' });
@@ -61,6 +59,7 @@ app.post('/signup', (req, res) => {
     
     createUser(username, password, (err) => {
       if (err) {
+        console.log(err)
         return res.render('signup', { error: 'An error occurred. Please try again later.' });
       }
       

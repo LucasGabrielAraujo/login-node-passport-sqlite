@@ -9,8 +9,8 @@ passport.use(new LocalStrategy(
       if (err) return done(err);
       if (!user) return done(null, false);
       
-      const hashedPassword = crypto.pbkdf2Sync(password, user.id.toString(), 10000, 64, 'sha512').toString('hex');
-      if (hashedPassword !== user.password) {
+      const hashedPassword = crypto.pbkdf2(password, user.id.toString(), 10000, 64, 'sha512').toString('hex');
+      if (hashedPassword !== user.hashed_password) {
         return done(null, false);
       }
       
