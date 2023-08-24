@@ -1,20 +1,30 @@
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
-const crypto = require('crypto');
+const bcrypt = require('bcrypt');
 const {db} = require('../db');
-
+let nombreusuario;
 passport.use(new LocalStrategy(
   (username, password, done) => {
     db.get("SELECT * FROM users WHERE username = ?", [username], (err, user) => {
-      if (err) return done(err);
-      if (!user) return done(null, false);
+      if (err) {console.error(err); return done(err);};
+      if (!user){console.error("usuario no encontrado"); return done(null, false);}
       
-      const hashedPassword = crypto.pbkdf2(password, user.id.toString(), 10000, 64, 'sha512').toString('hex');
-      if (hashedPassword !== user.hashed_password) {
-        return done(null, false);
-      }
-      
-      return done(null, user);
+      bcrypt.compare(password, user.password_hashed, (err, res)=>{
+        if (err) {
+          console.error(err)
+          return done(null, false);
+        }
+        if(res){
+          console.log(user.username)
+          module.exports = user.username;
+          
+          return done(null, user);
+        }
+        if (!res) {
+          console.error("contraseña incorrecta");
+          return done(null, false);
+        }
+      })
     });
   }
 ));

@@ -6,8 +6,7 @@ const bodyParser = require('body-parser');
 const path = require('path')
 const logger = require('morgan')
 const {db,createUser} = require('./db');
-require('./routes/auth');
-
+require('./routes/auth.js');
 const app = express();
 
 app.use(logger('dev'))
@@ -19,9 +18,24 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 app.get('/', (req, res)=>{
-  res.sendFile(__dirname + '/public/index.html')
+  let nombreusuario = require('./routes/auth.js')
+  if (req.isAuthenticated()) {
+    res.render(__dirname + '/public/index.ejs', { nombreusuario })
+  }else{
+    nombreusuario="Bienvenido"
+    res.render(__dirname + '/public/index.ejs', {nombreusuario});
+  }
+  
 })
+//nombre de usuario
 
+app.get("/logout", (req, res)=>{
+  nombreusuario=null;
+    req.logout((err)=>{
+      console.error(err);
+    });
+  res.redirect('/')
+})
 app.get('/login', (req, res)=>{
   res.render('login');
 });
@@ -32,7 +46,7 @@ app.post('/login', passport.authenticate('local', {
 
 
 app.get('/success', (req, res) => {
-  res.render('success');
+    res.render('success')
 });
 
 app.get('/failure', (req, res) => {
@@ -44,29 +58,33 @@ app.get('/signup', (req, res)=>{
 })
 app.post('/signup', (req, res) => {
   const { username, password } = req.body;
+
   if (!username || !password) {
-    return res.render('signup', { error: 'Both username and password are required.' });
+    console.error('Both username and password are required.')
+    return res.render('signup');
   }
-  
   db.get("SELECT * FROM users WHERE username = ?", [username], (err, user) => {
     if (err) {
-      return res.render('signup', { error: 'An error occurred. Please try again later.' });
+      console.error(err, 'An error occurred. Please try again later.' )
+      return res.render('signup');
     }
     
     if (user) {
-      return res.render('signup', { error: 'Username is already taken.' });
+      console.error('Username is already taken.')
+      return res.render('signup');
     }
     
     createUser(username, password, (err) => {
       if (err) {
         console.log(err)
-        return res.render('signup', { error: 'An error occurred. Please try again later.' });
+        return res.render('signup');
       }
       
       return res.redirect('/success');
     });
   });
 });
+
 
 
 app.listen(3000, () => {
